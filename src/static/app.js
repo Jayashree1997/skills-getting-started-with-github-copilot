@@ -4,6 +4,26 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
 
+  // Helper: derive 1-2 initials from an email or name
+  function getInitials(identifier) {
+    if (!identifier) return "";
+    const namePart = identifier.split("@")[0];
+    const parts = namePart.split(/[\.\-_ ]+/).filter(Boolean);
+    if (parts.length === 0) return namePart.slice(0, 2).toUpperCase();
+    const initials = parts.map((p) => p[0].toUpperCase()).join("");
+    return initials.slice(0, 2);
+  }
+
+  // Helper: simple HTML-escape to avoid injection when inserting into innerHTML
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
@@ -20,11 +40,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        // Build participants HTML
+        let participantsHtml = "";
+        if (details.participants && details.participants.length > 0) {
+          const items = details.participants
+            .map((p) => {
+              const initials = getInitials(p);
+              return `<li><span class="participant-avatar">${escapeHtml(initials)}</span><span class="participant-name">${escapeHtml(p)}</span></li>`;
+            })
+            .join("");
+          participantsHtml = `<div class="participants"><h5>Participants</h5><ul>${items}</ul></div>`;
+        } else {
+          participantsHtml = `<div class="participants"><div class="no-participants">No participants yet</div></div>`;
+        }
+
         activityCard.innerHTML = `
-          <h4>${name}</h4>
-          <p>${details.description}</p>
-          <p><strong>Schedule:</strong> ${details.schedule}</p>
+          <h4>${escapeHtml(name)}</h4>
+          <p>${escapeHtml(details.description)}</p>
+          <p><strong>Schedule:</strong> ${escapeHtml(details.schedule)}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          ${participantsHtml}
         `;
 
         activitiesList.appendChild(activityCard);
